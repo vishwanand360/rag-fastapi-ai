@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    image: rag-fastapi-ai:local
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      DATA_DIR: /app/data
+      QDRANT_PATH: /app/data/qdrant
+      RAG_API_KEY: ${RAG_API_KEY:-}
+    volumes:
+      - rag_data:/app/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  dashboard:
+    image: rag-fastapi-ai:local
+    command: streamlit run dashboard.py --server.address 0.0.0.0 --server.port 8501
+    environment:
+      RAG_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+volumes:
+  rag_data:

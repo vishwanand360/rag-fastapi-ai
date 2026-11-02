@@ -1,68 +1,27 @@
+"""Previous FAISS dashboard retained for compatibility with the local prototype."""
 import streamlit as st
-from backend.rag_engine import (
-    load_multiple_pdfs,
-    chunk_text,
-    create_embeddings,
-    retrieve
-)
 
-# -------------------------------
-# PAGE CONFIG
-# -------------------------------
-st.set_page_config(
-    page_title="RAG PDF Chatbot",
-    layout="centered"
-)
+from backend.rag_engine import build_rag_pipeline, retrieve_faiss
 
-# -------------------------------
-# TITLE
-# -------------------------------
+st.set_page_config(page_title="RAG PDF Chatbot", layout="centered")
 st.title("📄 RAG-Based PDF Chatbot")
-st.write(
-    "Ask questions from your PDF documents using "
-    "**Retrieval-Augmented Generation (RAG)**."
-)
+st.write("Ask questions from your PDF documents using semantic search powered by FAISS.")
 
-# -------------------------------
-# CACHE HEAVY OPERATIONS
-# -------------------------------
+
 @st.cache_resource(show_spinner=True)
-def load_rag_pipeline():
-    pages = load_multiple_pdfs("pdfs")
-    chunks = chunk_text(pages)
-    embeddings = create_embeddings(chunks)
-    return chunks, embeddings
+def load_rag_pipeline_cached():
+    return build_rag_pipeline("pdfs")
 
-# -------------------------------
-# LOAD DATA (ONLY ONCE)
-# -------------------------------
-with st.spinner("Loading documents and building embeddings..."):
-    chunks, embeddings = load_rag_pipeline()
 
-st.success("✅ Documents loaded successfully!")
+with st.spinner("Loading PDFs and building FAISS index..."):
+    chunks, embeddings, index = load_rag_pipeline_cached()
+st.success("✅ PDFs loaded and FAISS index ready!")
 
-# -------------------------------
-# USER INPUT
-# -------------------------------
-query = st.text_input(
-    "💬 Ask a question from the PDFs:",
-    placeholder="e.g. What is Retrieval-Augmented Generation?"
-)
-
-# -------------------------------
-# RETRIEVE & DISPLAY ANSWER
-# -------------------------------
+query = st.text_input("💬 Ask a question:", placeholder="What is Retrieval-Augmented Generation?")
 if query:
-    results = retrieve(query, embeddings, chunks)
-
+    results = retrieve_faiss(query, index, chunks)
     st.subheader("📌 Retrieved Context")
-
-    if results:
-        for i, res in enumerate(results, 1):
-            st.markdown(
-                f"**Source {i}:** `{res['source']}` | Page {res['page']}"
-            )
-            st.write(res["text"])
-            st.divider()
-    else:
-        st.warning("No relevant information found in the PDFs.")
+    for i, result in enumerate(results, start=1):
+        st.markdown(f"**Source {i}:** `{result['source']}` | Page {result['page']}")
+        st.write(result["text"])
+        st.divider()

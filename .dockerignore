@@ -1,0 +1,7 @@
+.git
+.env
+data
+pdfs
+__pycache__
+.pytest_cache
+*.py[cod]

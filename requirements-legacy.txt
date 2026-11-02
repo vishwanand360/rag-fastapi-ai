@@ -1,0 +1,5 @@
+-r requirements.txt
+faiss-cpu
+scikit-learn
+pypdf
+google-generativeai
